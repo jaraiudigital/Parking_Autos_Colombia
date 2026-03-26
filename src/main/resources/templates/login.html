@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Parking Colombia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-container { width: 100%; max-width: 450px; padding: 20px; }
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            text-align: center;
+            padding: 40px 30px;
+        }
+        .logo-icon { font-size: 48px; }
+        .login-header h1 { font-size: 28px; margin-top: 10px; }
+        .login-form { padding: 30px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #2c3e50; }
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52,152,219,0.1);
+        }
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .error-message {
+            margin-top: 20px;
+            padding: 12px;
+            background: #fef3f2;
+            border-left: 4px solid #e74c3c;
+            color: #e74c3c;
+            border-radius: 8px;
+        }
+        .login-footer { text-align: center; padding: 20px; border-top: 1px solid #ecf0f1; font-size: 12px; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="logo-icon">🏢</div>
+            <h1>Parking Colombia</h1>
+            <p>Sistema de Gestión de Parqueadero</p>
+        </div>
+
+        <form action="/login" method="POST" class="login-form">
+            <div class="form-group">
+                <label>Usuario</label>
+                <input type="text" name="username" required autofocus>
+            </div>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" name="password" required>
+            </div>
+            <button type="submit" class="btn-login">Iniciar Sesión</button>
+
+            <div th:if="${error}" class="error-message" th:text="${error}"></div>
+        </form>
+
+        <div class="login-footer">
+            <p>Parking Colombia © 2024</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

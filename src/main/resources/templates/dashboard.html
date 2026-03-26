@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Parking Colombia</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .navbar { background: #2c3e50; color: white; padding: 15px; display: flex; justify-content: space-between; }
+        .container { display: flex; margin-top: 20px; }
+        .sidebar { width: 250px; background: white; padding: 15px; border-radius: 8px; margin-right: 20px; }
+        .menu-item { padding: 10px; cursor: pointer; margin: 5px 0; border-radius: 5px; }
+        .menu-item:hover { background: #ecf0f1; }
+        .menu-item.active { background: #3498db; color: white; }
+        .content { flex: 1; background: white; padding: 20px; border-radius: 8px; min-height: 500px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #2980b9; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; }
+        .celda-card { display: inline-block; width: 80px; padding: 10px; margin: 5px; text-align: center; border-radius: 5px; background: #ecf0f1; }
+        .celda-card.disponible { background: #d4edda; border: 1px solid #28a745; }
+        .celda-card.ocupada { background: #f8d7da; border: 1px solid #dc3545; }
+        .toast { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #28a745; color: white; border-radius: 5px; }
+        .error { background: #dc3545; }
+    </style>
+</head>
+<body>
+<div class="navbar">
+    <h2>🏢 Parking Colombia</h2>
+    <div>
+        <span th:text="${usuario.nombre}"></span>
+        (<span th:text="${usuario.rol}"></span>)
+        <a href="/logout" style="color: white; margin-left: 15px;">Cerrar Sesión</a>
+    </div>
+</div>
+
+<div class="container">
+    <div class="sidebar">
+        <div class="menu-item active" data-section="entrada">🚗 Registrar Entrada</div>
+        <div class="menu-item" data-section="salida">💰 Registrar Salida</div>
+        <div class="menu-item" data-section="activos">📋 Vehículos Activos</div>
+        <div class="menu-item" data-section="mapa">🗺️ Mapa de Celdas</div>
+        <div th:if="${usuario.rol == 'administrador'}" class="menu-item" data-section="admin">⚙️ Administración</div>
+    </div>
+
+    <div class="content">
+        <!-- Sección Entrada -->
+        <div id="entrada-section" class="section active">
+            <h2>Registrar Entrada</h2>
+            <form id="entradaForm" action="/registrarEntrada" method="POST">
+                <div class="form-group">
+                    <label>Placa:</label>
+                    <input type="text" name="placa" id="placa" required placeholder="ABC123">
+                </div>
+                <div class="form-group">
+                    <label>Marca:</label>
+                    <input type="text" name="marca" id="marca" required>
+                </div>
+                <div class="form-group">
+                    <label>Modelo:</label>
+                    <input type="text" name="modelo" id="modelo">
+                </div>
+                <div class="form-group">
+                    <label>Color:</label>
+                    <input type="text" name="color" id="color">
+                </div>
+                <div class="form-group">
+                    <label>Tipo Cliente:</label>
+                    <select name="tipoCliente" id="tipoCliente">
+                        <option value="ocasional">Ocasional</option>
+                        <option value="mensualidad">Mensualidad</option>
+                    </select>
+                </div>
+                <div class="form-group" id="clienteDiv" style="display:none;">
+                    <label>Cliente Mensualidad:</label>
+                    <select name="clienteId" id="clienteId">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Celda:</label>
+                    <select name="celdaId" id="celdaId" required>
+                        <option value="">Cargando celdas...</option>
+                    </select>
+                </div>
+                <button type="submit">Registrar Entrada</button>
+            </form>
+        </div>
+
+        <!-- Sección Salida -->
+        <div id="salida-section" class="section">
+            <h2>Registrar Salida</h2>
+            <div class="form-group">
+                <label>Placa:</label>
+                <input type="text" id="placaSalida" placeholder="Ingrese placa">
+                <button onclick="buscarVehiculo()" style="margin-top:10px;">Buscar</button>
+            </div>
+            <div id="infoSalida"></div>
+        </div>
+
+        <!-- Sección Vehículos Activos -->
+        <div id="activos-section" class="section">
+            <h2>Vehículos Activos</h2>
+            <div id="activosCount" style="font-size:24px; font-weight:bold; margin-bottom:15px;">0</div>
+            <table id="activosTable">
+                <thead><tr><th>Placa</th><th>Marca</th><th>Celda</th><th>Hora Entrada</th><th>Tiempo</th></tr></thead>
+                <tbody><tr><td colspan="5">Cargando...</td></tr></tbody>
+            </table>
+        </div>
+
+        <!-- Sección Mapa de Celdas -->
+        <div id="mapa-section" class="section">
+            <h2>Mapa de Celdas</h2>
+            <div id="celdasGrid"></div>
+        </div>
+
+        <!-- Sección Administración -->
+        <div id="admin-section" class="section" th:if="${usuario.rol == 'administrador'}">
+            <h2>Gestión de Celdas</h2>
+            <button onclick="inicializarCeldas()">Inicializar Celdas</button>
+            <div id="adminCeldas"></div>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<script>
+    let usuarioRol = '[[${usuario.rol}]]';
+
+    $(document).ready(function() {
+        console.log("Dashboard cargado");
+        cargarCeldas();
+        cargarClientes();
+        cargarVehiculosActivos();
+        cargarMapaCeldas();
+
+        $('.menu-item').click(function() {
+            $('.menu-item').removeClass('active');
+            $(this).addClass('active');
+            $('.section').removeClass('active');
+            $('#' + $(this).data('section') + '-section').addClass('active');
+
+            if ($(this).data('section') === 'mapa') cargarMapaCeldas();
+            if ($(this).data('section') === 'activos') cargarVehiculosActivos();
+            if ($(this).data('section') === 'entrada') cargarCeldas();
+        });
+
+        $('#tipoCliente').change(function() {
+            if ($(this).val() === 'mensualidad') {
+                $('#clienteDiv').show();
+            } else {
+                $('#clienteDiv').hide();
+            }
+        });
+    });
+
+    function cargarCeldas() {
+        console.log("Cargando celdas...");
+        $.get('/api/celdas/disponibles')
+            .done(function(data) {
+                console.log("Celdas recibidas:", data);
+                var select = $('#celdaId');
+                select.empty();
+                if (data && data.length > 0) {
+                    select.append('<option value="">Seleccione celda</option>');
+                    for (var i = 0; i < data.length; i++) {
+                        select.append('<option value="' + data[i].id + '">' + data[i].numeroCelda + ' - ' + (data[i].ubicacion || 'Sin ubicación') + '</option>');
+                    }
+                    mostrarMensaje('Celdas cargadas: ' + data.length, 'success');
+                } else {
+                    select.append('<option value="">No hay celdas disponibles</option>');
+                }
+            })
+            .fail(function(err) {
+                console.error("Error:", err);
+                $('#celdaId').html('<option value="">Error al cargar celdas</option>');
+                mostrarMensaje('Error al cargar celdas', 'error');
+            });
+    }
+
+    function cargarClientes() {
+        $.get('/api/clientes/mensualidad')
+            .done(function(data) {
+                var select = $('#clienteId');
+                select.empty();
+                if (data && data.length > 0) {
+                    select.append('<option value="">Seleccione cliente</option>');
+                    for (var i = 0; i < data.length; i++) {
+                        select.append('<option value="' + data[i].id + '">' + data[i].nombre + '</option>');
+                    }
+                } else {
+                    select.append('<option value="">No hay clientes</option>');
+                }
+            });
+    }
+
+    function cargarVehiculosActivos() {
+        $.get('/api/vehiculos/activos')
+            .done(function(data) {
+                var tbody = $('#activosTable tbody');
+                tbody.empty();
+                if (data && data.length > 0) {
+                    $('#activosCount').text(data.length);
+                    for (var i = 0; i < data.length; i++) {
+                        var v = data[i];
+                        var fecha = new Date(v.fechaEntrada);
+                        tbody.append('<tr><td>' + v.placa + '</td><td>' + v.marca + '</td><td>' + v.numeroCelda + '</td><td>' + fecha.toLocaleTimeString() + '</td><td>' + v.tiempo + '</td></tr>');
+                    }
+                } else {
+                    $('#activosCount').text(0);
+                    tbody.append('<tr><td colspan="5">No hay vehículos activos</td></tr>');
+                }
+            });
+    }
+
+    function cargarMapaCeldas() {
+        $.get('/api/celdas')
+            .done(function(data) {
+                var container = $('#celdasGrid');
+                container.empty();
+                if (data && data.length > 0) {
+                    for (var i = 0; i < data.length; i++) {
+                        var c = data[i];
+                        var estadoClass = c.estado === 'disponible' ? 'disponible' : (c.estado === 'ocupada' ? 'ocupada' : '');
+                        container.append('<div class="celda-card ' + estadoClass + '">' + c.numeroCelda + '<br>' + c.estado + '</div>');
+                    }
+                } else {
+                    container.html('<p>No hay celdas registradas</p>');
+                }
+            });
+    }
+
+    function buscarVehiculo() {
+        var placa = $('#placaSalida').val().toUpperCase();
+        if (!placa) {
+            mostrarMensaje('Ingrese placa', 'error');
+            return;
+        }
+        $.get('/api/vehiculos/activos')
+            .done(function(data) {
+                var vehiculo = null;
+                for (var i = 0; i < data.length; i++) {
+                    if (data[i].placa === placa) {
+                        vehiculo = data[i];
+                        break;
+                    }
+                }
+                if (vehiculo) {
+                    var fecha = new Date(vehiculo.fechaEntrada);
+                    var horas = Math.floor((new Date() - fecha) / (1000 * 60 * 60));
+                    var valor = Math.max(1, horas) * 3000;
+                    $('#infoSalida').html(`
+                        <div style="border:1px solid #ddd; padding:15px; margin-top:15px; border-radius:5px;">
+                            <h3>Vehículo Encontrado</h3>
+                            <p><strong>Placa:</strong> ${vehiculo.placa}</p>
+                            <p><strong>Marca:</strong> ${vehiculo.marca}</p>
+                            <p><strong>Celda:</strong> ${vehiculo.numeroCelda}</p>
+                            <p><strong>Hora entrada:</strong> ${fecha.toLocaleString()}</p>
+                            <p><strong>Valor a pagar:</strong> $${formatNumber(valor)}</p>
+                            <button onclick="procesarSalida(${vehiculo.id}, ${valor})">Registrar Salida</button>
+                        </div>
+                    `);
+                } else {
+                    $('#infoSalida').html('<p style="color:red;">Vehículo no encontrado</p>');
+                }
+            });
+    }
+
+    function procesarSalida(registroId, valor) {
+        if (confirm('Confirmar salida. Valor: $' + formatNumber(valor))) {
+            $('<form action="/registrarSalida" method="POST">' +
+              '<input type="hidden" name="registroId" value="' + registroId + '">' +
+              '<input type="hidden" name="valorPagado" value="' + valor + '">' +
+              '</form>').appendTo('body').submit();
+        }
+    }
+
+    function inicializarCeldas() {
+        $.get('/api/inicializar-celdas')
+            .done(function(data) {
+                mostrarMensaje(data, 'success');
+                cargarMapaCeldas();
+                cargarCeldas();
+            });
+    }
+
+    function formatNumber(num) {
+        return new Intl.NumberFormat('es-CO').format(Math.round(num));
+    }
+
+    function mostrarMensaje(msg, tipo) {
+        var toast = $('<div class="toast ' + (tipo === 'error' ? 'error' : '') + '">' + msg + '</div>');
+        $('#toastContainer').append(toast);
+        setTimeout(function() { toast.remove(); }, 3000);
+    }
+</script>
+</body>
+</html>
